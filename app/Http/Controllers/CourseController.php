@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
@@ -23,26 +24,48 @@ class CourseController extends Controller
             'modules.*.title' => 'required|string|max:255',
             'modules.*.contents' => 'required|array',
             'modules.*.contents.*.type' => 'required|string|in:text,image,video,link',
-            'modules.*.contents.*.content_data' => 'required|string',
+            'modules.*.contents.*.content_data' => 'required_unless:modules.*.contents.*.type,image',
+            'module_images.*.*' => 'required_if:modules.*.contents.*.type,image|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         DB::beginTransaction();
         try {
+            // Create the course
             $course = Course::create([
                 'title' => $request->title,
                 'description' => $request->description,
                 'category' => $request->category,
             ]);
 
-            foreach ($request->modules as $moduleData) {
+            // Create directory for course images if it doesn't exist
+            $courseImagesPath = 'course_images/' . $course->id;
+            if (!file_exists(public_path($courseImagesPath))) {
+                mkdir(public_path($courseImagesPath), 0777, true);
+            }
+
+            // Process each module
+            foreach ($request->modules as $moduleIndex => $moduleData) {
                 $module = $course->modules()->create([
                     'title' => $moduleData['title'],
                 ]);
 
-                foreach ($moduleData['contents'] as $contentData) {
+                // Process each content item
+                foreach ($moduleData['contents'] as $contentIndex => $contentData) {
+                    $contentType = $contentData['type'];
+                    $contentDataValue = $contentData['content_data'];
+
+                    // Handle image uploads
+                    if ($contentType === 'image' && isset($request->module_images[$moduleIndex][$contentIndex])) {
+                        $image = $request->module_images[$moduleIndex][$contentIndex];
+                        $imageName = time() . '_' . $moduleIndex . '_' . $contentIndex . '.' . $image->extension();
+                        $image->move(public_path($courseImagesPath), $imageName);
+                        $contentDataValue = $courseImagesPath . '/' . $imageName;
+                    }
+
+                    // Create the content record
                     $module->contents()->create([
-                        'type' => $contentData['type'],
-                        'content_data' => $contentData['content_data'],
+                        'type' => $contentType,
+                        'content_data' => $contentDataValue,
                     ]);
                 }
             }

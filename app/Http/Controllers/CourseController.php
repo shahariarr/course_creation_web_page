@@ -30,14 +30,12 @@ class CourseController extends Controller
 
         DB::beginTransaction();
         try {
-            // Create the course
             $course = Course::create([
                 'title' => $request->title,
                 'description' => $request->description,
                 'category' => $request->category,
             ]);
 
-            // Create directory for course images if it doesn't exist
             $courseImagesPath = 'course_images/' . $course->id;
             if (!file_exists(public_path($courseImagesPath))) {
                 mkdir(public_path($courseImagesPath), 0777, true);
@@ -49,12 +47,10 @@ class CourseController extends Controller
                     'title' => $moduleData['title'],
                 ]);
 
-                // Process each content item
                 foreach ($moduleData['contents'] as $contentIndex => $contentData) {
                     $contentType = $contentData['type'];
                     $contentDataValue = $contentData['content_data'];
 
-                    // Handle image uploads
                     if ($contentType === 'image' && isset($request->module_images[$moduleIndex][$contentIndex])) {
                         $image = $request->module_images[$moduleIndex][$contentIndex];
                         $imageName = time() . '_' . $moduleIndex . '_' . $contentIndex . '.' . $image->extension();
@@ -62,7 +58,6 @@ class CourseController extends Controller
                         $contentDataValue = $courseImagesPath . '/' . $imageName;
                     }
 
-                    // Create the content record
                     $module->contents()->create([
                         'type' => $contentType,
                         'content_data' => $contentDataValue,

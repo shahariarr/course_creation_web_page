@@ -356,10 +356,8 @@
                 var inputIndex = inputName.match(/\[contents\]\[(\d+)\]/)[1];
                 var moduleIndex = $(this).closest('.module-card').data('module-index');
 
-                // Clear the container
                 contentDataContainer.html('');
 
-                // Create appropriate input based on selected type
                 switch(selectedType) {
                     case 'text':
                         contentDataContainer.html(`
@@ -430,7 +428,6 @@
                 });
             });
 
-            // Trigger one module to start with
             $('#add-module-btn').click();
         });
     </script>
